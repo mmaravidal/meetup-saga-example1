@@ -10,12 +10,14 @@ namespace Cli
     {
         private readonly List<string> _items = new List<string>();
         private readonly string _name;
-        private readonly bool _throws;
+        private readonly bool _rollsback;
+        private readonly bool _commits;
 
-        public TransactionalService(string name, bool throws)
+        public TransactionalService(string name, bool rollsback, bool commits)
         {
             _name = name;
-            _throws = throws;
+            _rollsback = rollsback;
+            _commits = commits;
 
             // Enlist the service within the transaction
             Transaction.Current.EnlistVolatile(this, EnlistmentOptions.None);
@@ -23,13 +25,16 @@ namespace Cli
 
         public void Commit(Enlistment enlistment)
         {
-            ColorConsole.WriteLine(_name, ": ", "Executing Commit()".Black().OnDarkGray());
+            // This method is used to commit the data. Should never throw.
 
-            if (_throws) throw new InvalidOperationException(_name + " throws");
+            ColorConsole.WriteLine($"{_name}: Executing Commit()".White());
+
+            if (!_commits) throw new InvalidOperationException(_name + " throws");
 
             foreach (var item in _items)
-                ColorConsole.WriteLine(_name, ": ", item.DarkGray());
-
+                ColorConsole.WriteLine($"  {_name}: Commited {item}".DarkGray());
+            
+            ColorConsole.WriteLine($"  {_name}: Calls Done()".DarkGray());
             enlistment.Done();
         }
 
@@ -40,27 +45,41 @@ namespace Cli
 
         public void InDoubt(Enlistment enlistment)
         {
-            ColorConsole.WriteLine(_name, ": ", "Executing InDount()".Black().OnDarkGray());
+            // This method is used when the transaction is in doubt, i.e: a failure occurred in any agent while commiting
 
-            // Do nothing. This method is used when the transaction is in doubt, i.e: a failure occurred in any agent while commiting
+            ColorConsole.WriteLine($"{_name}: Executing InDount()".White());
+            
+            ColorConsole.WriteLine($"  {_name} Calls Done()".DarkGray());
             enlistment.Done();
         }
 
         public void Prepare(PreparingEnlistment preparingEnlistment)
         {
-            ColorConsole.WriteLine(_name, ": ", "Executing Prepare()".Black().OnDarkGray());
+            // This method is used to prepare the data for the commit phase.
 
-            // Do nothing. This method is used to prepare the data for the commit phase.
-            preparingEnlistment.Prepared();
+            ColorConsole.WriteLine($"{_name}: Executing Prepare()".White());
+
+            if (_rollsback)
+            {
+                ColorConsole.WriteLine($"  {_name}: Calls ForceRollback()".DarkGray());
+                preparingEnlistment.ForceRollback();
+            }
+            else
+            {
+                ColorConsole.WriteLine($"  {_name}: Calls Prepared()".DarkGray());
+                preparingEnlistment.Prepared();
+            }
         }
 
         public void Rollback(Enlistment enlistment)
         {
-            ColorConsole.WriteLine(_name, ": ", "Executing Rollback()".Black().OnDarkGray());
-
             // Rollback the transaction
+
+            ColorConsole.WriteLine($"{_name}: Executing Rollback()".White());
+
             _items.Clear();
 
+            ColorConsole.WriteLine($"  {_name}: Calls Done()".DarkGray());
             enlistment.Done();
         }
     }
