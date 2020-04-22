@@ -11,26 +11,91 @@ namespace Cli
         {
             WhenSuccess();
 
-            WhenFirstFails();
+            WhenFirstRollsback();
+            WhenLastRollsback();
 
+            WhenFirstFails();
             WhenLastFails();
         }
 
         static async Task WhenSuccess()
         {
             ColorConsole.WriteLine();
-            ColorConsole.WriteLine("Simulating a successful transaction".DarkGreen());
+            ColorConsole.WriteLine("Simulating a first agent rollsback transaction".DarkGreen());
 
-            using (var transaction = new TransactionScope())
+            try
             {
-                var repository = new TransactionalService("Repository", false);
-                var publisher = new TransactionalService("Publisher", false);
+                using (var transaction = new TransactionScope())
+                {
+                    var repository = new TransactionalService("Repository", rollsback: false, commits: true);
+                    var publisher = new TransactionalService("Publisher", rollsback: false, commits: true);
 
-                var item = Guid.NewGuid().ToString();
-                repository.Add(item);
-                publisher.Add(item);
+                    var item = Guid.NewGuid().ToString();
+                    repository.Add(item);
+                    publisher.Add(item);
 
-                transaction.Complete();
+                    transaction.Complete();
+                }
+
+                ColorConsole.WriteLine("The transaction has completed".DarkGreen());
+            }
+            catch (Exception exception)
+            {
+                ColorConsole.WriteLine(exception.Message.DarkRed());
+            }
+        }
+
+        static async Task WhenFirstRollsback()
+        {
+            ColorConsole.WriteLine();
+            ColorConsole.WriteLine("Simulating a first agent rollsback transaction".DarkGreen());
+
+            try
+            {
+                using (var transaction = new TransactionScope())
+                {
+                    var repository = new TransactionalService("Repository", rollsback: true, commits: true);
+                    var publisher = new TransactionalService("Publisher", rollsback: false, commits: true);
+
+                    var item = Guid.NewGuid().ToString();
+                    repository.Add(item);
+                    publisher.Add(item);
+
+                    transaction.Complete();
+                }
+
+                ColorConsole.WriteLine("The transaction has completed".DarkGreen());
+            }
+            catch (Exception exception)
+            {
+                ColorConsole.WriteLine(exception.Message.DarkRed());
+            }
+        }
+
+        static async Task WhenLastRollsback()
+        {
+            ColorConsole.WriteLine();
+            ColorConsole.WriteLine("Simulating a first agent rollsback transaction".DarkGreen());
+
+            try
+            {
+                using (var transaction = new TransactionScope())
+                {
+                    var repository = new TransactionalService("Repository", rollsback: false, commits: true);
+                    var publisher = new TransactionalService("Publisher", rollsback: true, commits: true);
+
+                    var item = Guid.NewGuid().ToString();
+                    repository.Add(item);
+                    publisher.Add(item);
+
+                    transaction.Complete();
+                }
+
+                ColorConsole.WriteLine("The transaction has completed".DarkGreen());
+            }
+            catch (Exception exception)
+            {
+                ColorConsole.WriteLine(exception.Message.DarkRed());
             }
         }
 
@@ -43,8 +108,8 @@ namespace Cli
             {
                 using (var transaction = new TransactionScope())
                 {
-                    var repository = new TransactionalService("Repository", true);
-                    var publisher = new TransactionalService("Publisher", false);
+                    var repository = new TransactionalService("Repository", rollsback: false, commits: false);
+                    var publisher = new TransactionalService("Publisher", rollsback: false, commits: true);
 
                     var item = Guid.NewGuid().ToString();
                     repository.Add(item);
@@ -52,6 +117,8 @@ namespace Cli
 
                     transaction.Complete();
                 }
+
+                ColorConsole.WriteLine("The transaction has completed".DarkGreen());
             }
             catch (Exception exception)
             {
@@ -68,8 +135,8 @@ namespace Cli
             {
                 using (var transaction = new TransactionScope())
                 {
-                    var repository = new TransactionalService("Repository", false);
-                    var publisher = new TransactionalService("Publisher", true);
+                    var repository = new TransactionalService("Repository", rollsback: false, commits: true);
+                    var publisher = new TransactionalService("Publisher", rollsback: false, commits: false);
 
                     var item = Guid.NewGuid().ToString();
                     repository.Add(item);
@@ -77,6 +144,8 @@ namespace Cli
 
                     transaction.Complete();
                 }
+
+                ColorConsole.WriteLine("The transaction has completed".DarkGreen());
             }
             catch (Exception exception)
             {
