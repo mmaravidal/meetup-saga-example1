@@ -1,6 +1,6 @@
-﻿namespace Example2
+﻿namespace Example2.Events.Models
 {
-    public class CreateOrderCommand
+    public class CreateOrderResponse
     {
         public string Id { get; set; }
         public string Name { get; set; }

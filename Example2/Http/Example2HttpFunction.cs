@@ -8,12 +8,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Microsoft.Azure.WebJobs.Extensions.DurableTask;
+using Example2.Http.Models;
 
-namespace Example2
+namespace Example2.Http
 {
-    public static class Example2Function
+    public static class Example2HttpFunction
     {
-        [FunctionName("Example2-Client")]
+        [FunctionName("Example2-Http-Client")]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequest request,
             [DurableClient] IDurableOrchestrationClient starter)
@@ -23,7 +24,7 @@ namespace Example2
 
             var command = JsonSerializer.CreateDefault().Deserialize<CreateOrderRequest>(json);
 
-            var id = await starter.StartNewAsync("Example2-Orchestrator", command);
+            var id = await starter.StartNewAsync("Example2-Http-Orchestrator", command);
 
             return new CreatedResult("", new CreateOrderResponse
             {
@@ -32,13 +33,13 @@ namespace Example2
             });
         }
 
-        [FunctionName("Example2-Orchestrator")]
+        [FunctionName("Example2-Http-Orchestrator")]
         public static async Task StartAsync([OrchestrationTrigger] IDurableOrchestrationContext context)
         {
             var command = context.GetInput<CreateOrderRequest>();
             
             // Create the order
-            await context.CallActivityAsync("Example2-CreateOrder", new CreateOrderCommand
+            await context.CallActivityAsync("Example2-Http-CreateOrder", new CreateOrderCommand
             {
                 Id = context.InstanceId,
                 Name = command.Name
@@ -49,7 +50,7 @@ namespace Example2
                 foreach (var item in command.Items)
                 {
                     // Reserve the item stock
-                    await context.CallActivityAsync("Example2-LeaseStock", new LeaseStockCommand
+                    await context.CallActivityAsync("Example2-Http-LeaseStock", new LeaseStockCommand
                     {
                         Item = item.Key,
                         Quantity = item.Value
@@ -61,17 +62,16 @@ namespace Example2
                 // Compensating a failure. Removing the reservation.
                 foreach (var item in command.Items)
                 {
-                    await context.CallActivityAsync("Example2-UnleaseStock", new UnleaseStockCommand
+                    await context.CallActivityAsync("Example2-Http-UnleaseStock", new UnleaseStockCommand
                     {
                         Item = item.Key,
                         Quantity = item.Value
                     });
                 }
-                
             }
         }
 
-        [FunctionName("Example2-CreateOrder")]
+        [FunctionName("Example2-Http-CreateOrder")]
         public static async Task CreateOrder([ActivityTrigger] CreateOrderCommand command, ILogger logger)
         {
             logger.LogWarning("Creating order");
@@ -80,7 +80,7 @@ namespace Example2
             await Task.Delay(100);
         }
 
-        [FunctionName("Example2-LeaseStock")]
+        [FunctionName("Example2-Http-LeaseStock")]
         public static async Task LeaseStock([ActivityTrigger] LeaseStockCommand command, ILogger logger)
         {
             logger.LogWarning("Ordering item");
@@ -97,7 +97,7 @@ namespace Example2
             }
         }
 
-        [FunctionName("Example2-UnleaseStock")]
+        [FunctionName("Example2-Http-UnleaseStock")]
         public static async Task UnleaseStock([ActivityTrigger] UnleaseStockCommand command, ILogger logger)
         {
             logger.LogWarning("Unleasing stock");
