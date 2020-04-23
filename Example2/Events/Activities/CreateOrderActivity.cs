@@ -5,13 +5,14 @@ using Microsoft.Azure.WebJobs.Extensions.DurableTask;
 using Microsoft.Azure.WebJobs.ServiceBus;
 using Microsoft.Azure.ServiceBus;
 using System.Text;
+using Example2.Events.Models;
 
 namespace Example2
 {
     public static class CreateOrderActivity
     {
         [FunctionName("Example2-Events-CreateOrder")]
-        [return: ServiceBus("create-order", Connection = "%ServiceBus%", EntityType = EntityType.Queue)]
+        [return: ServiceBus("create-order", Connection = "ServiceBus", EntityType = EntityType.Queue)]
         public static Message CreateOrder([ActivityTrigger] IDurableActivityContext context)
         {
             var command = context.GetInput<CreateOrderCommand>();
@@ -25,7 +26,7 @@ namespace Example2
 
         [FunctionName("Example2-Events-OrderCreatedHandler")]
         public static async Task HandleOrderCreated(
-            [ServiceBus("order-created", Connection = "%ServiceBus%", EntityType = EntityType.Topic)] Message message,
+            [ServiceBus("order-created", Connection = "ServiceBus", EntityType = EntityType.Topic)] Message message,
             [DurableClient] IDurableOrchestrationClient client)
         {
             var @event = JsonConvert.DeserializeObject<OrderCreatedEvent>(Encoding.UTF8.GetString(message.Body));
