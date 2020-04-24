@@ -1,4 +1,4 @@
-﻿namespace Example2
+﻿namespace Example2.Http.Models
 {
     public class LeaseStockCommand
     {
