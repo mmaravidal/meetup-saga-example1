@@ -26,15 +26,12 @@ namespace Example2
 
         [FunctionName("Example2-Events-OrderCreatedHandler")]
         public static async Task HandleOrderCreated(
-            [ServiceBus("order-created", Connection = "ServiceBus", EntityType = EntityType.Topic)] Message message,
+            [ServiceBusTrigger("order-created", "orchestrator", Connection = "ServiceBus")] Message message,
             [DurableClient] IDurableOrchestrationClient client)
         {
             var @event = JsonConvert.DeserializeObject<OrderCreatedEvent>(Encoding.UTF8.GetString(message.Body));
 
-            await client.RaiseEventAsync(
-                message.ReplyTo, 
-                "order-created", 
-                @event);
+            await client.RaiseEventAsync(message.ReplyTo, "order-created", @event);
         }
     }
 }

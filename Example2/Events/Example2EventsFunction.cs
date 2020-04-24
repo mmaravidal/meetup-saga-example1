@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 using Microsoft.Azure.WebJobs.Extensions.DurableTask;
 using System.Collections.Generic;
 using Example2.Events.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Example2.Events
 {
@@ -33,10 +34,11 @@ namespace Example2.Events
         }
 
         [FunctionName("Example2-Events-Orchestrator")]
-        public static async Task StartAsync([OrchestrationTrigger] IDurableOrchestrationContext context)
+        public static async Task StartAsync([OrchestrationTrigger] IDurableOrchestrationContext context, ILogger logger)
         {
             var request = context.GetInput<CreateOrderRequest>();
 
+            logger.LogWarning("[{instanceId}] Creating order: {name}", context.InstanceId, request.Name);
             await CreateOrder(context, new CreateOrderCommand
             {
                 Id = context.InstanceId,
@@ -49,6 +51,7 @@ namespace Example2.Events
             {
                 foreach (var item in request.Items)
                 {
+                    logger.LogWarning("[{instanceId}] Leasing stock: {item}", context.InstanceId, item.Key);
                     leased.Add(await LeaseStock(context, new LeaseStockCommand
                     {
                         Id = request.Id,
@@ -56,11 +59,14 @@ namespace Example2.Events
                         Quantity = item.Value
                     }));
                 }
+
+                logger.LogWarning("[{instanceId}] Order completed", context.InstanceId);
             }
             catch (CompensationEventDetectedException)
             {
                 foreach(var @event in leased)
                 {
+                    logger.LogWarning("[{instanceId}] Unleasing stock: {item}", context.InstanceId, @event.Item);
                     await UnleaseStock(context, new UnleaseStockCommand
                     {
                         Id = request.Id,
@@ -68,6 +74,8 @@ namespace Example2.Events
                         Quantity = @event.Quantity
                     });
                 }
+
+                logger.LogWarning("[{instanceId}] Order rejected", context.InstanceId);
             }
         }
 

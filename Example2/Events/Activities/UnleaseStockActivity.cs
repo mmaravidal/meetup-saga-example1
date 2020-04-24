@@ -26,10 +26,12 @@ namespace Example2
 
         [FunctionName("Example2-Events-StockUnleasedHandler")]
         public static async Task HandleStockLeased(
-            [ServiceBus("stock-unleased", Connection = "ServiceBus", EntityType = EntityType.Topic)] StockLeasedEvent @event,
+            [ServiceBusTrigger("stock-unleased", "orchestrator", Connection = "ServiceBus")] Message message,
             [DurableClient] IDurableOrchestrationClient client)
         {
-            await client.RaiseEventAsync(@event.Id, "stock-unleased", @event);
+            var @event = JsonConvert.DeserializeObject<StockUnleasedEvent>(Encoding.UTF8.GetString(message.Body));
+
+            await client.RaiseEventAsync(message.ReplyTo, "stock-unleased", @event);
         }
     }
 }

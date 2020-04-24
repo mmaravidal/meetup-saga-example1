@@ -26,18 +26,22 @@ namespace Example2
 
         [FunctionName("Example2-Events-StockLeasedHandler")]
         public static async Task HandleStockLeased(
-            [ServiceBus("stock-leased", Connection = "ServiceBus", EntityType = EntityType.Topic)] StockLeasedEvent @event,
+            [ServiceBusTrigger("stock-leased", "orchestrator", Connection = "ServiceBus")] Message message,
             [DurableClient] IDurableOrchestrationClient client)
         {
-            await client.RaiseEventAsync(@event.Id, "stock-leased", @event);
+            var @event = JsonConvert.DeserializeObject<StockLeasedEvent>(Encoding.UTF8.GetString(message.Body));
+
+            await client.RaiseEventAsync(message.ReplyTo, "stock-leased", @event);
         }
 
         [FunctionName("Example2-Events-StockLeaseDeniedHandler")]
         public static async Task HandleStockLeaseDenied(
-            [ServiceBus("stock-lease-denied", Connection = "ServiceBus", EntityType = EntityType.Topic)] StockLeaseDeniedEvent @event,
+            [ServiceBusTrigger("stock-lease-denied", "orchestrator", Connection = "ServiceBus")] Message message,
             [DurableClient] IDurableOrchestrationClient client)
         {
-            await client.RaiseEventAsync(@event.Id, "order-create-denied", @event);
+            var @event = JsonConvert.DeserializeObject<StockLeaseDeniedEvent>(Encoding.UTF8.GetString(message.Body));
+
+            await client.RaiseEventAsync(message.ReplyTo, "stock-lease-denied", @event);
         }
     }
 }
